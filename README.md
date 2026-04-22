@@ -1,28 +1,28 @@
 # AgentBar
 
-App de bandeja para Windows hecha con React + Electron. Muestra un resumen compacto del uso de agentes de IA desde la barra del sistema.
+Windows tray app built with React and Electron. It shows a compact usage summary for AI agents directly from the system tray.
 
-## Capturas
+## Screenshots
 
-| Modo oscuro | Modo claro |
+| Dark mode | Light mode |
 | --- | --- |
-| ![AgentBar en modo oscuro](docs/screenshots/agentbar-dark.png) | ![AgentBar en modo claro](docs/screenshots/agentbar-light.png) |
+| ![AgentBar in dark mode](docs/screenshots/agentbar-dark.png) | ![AgentBar in light mode](docs/screenshots/agentbar-light.png) |
 
-## Requisitos
+## Requirements
 
-- Node.js 20 o superior
-- Windows 11 para la experiencia de bandeja del sistema
+- Node.js 20 or later
+- Windows 11 for the system tray experience
 
-## Desarrollo
+## Development
 
 ```powershell
 npm install
 npm run dev
 ```
 
-La app abre un icono en la bandeja. Clic izquierdo muestra el resumen; clic derecho muestra acciones.
+The app opens a tray icon. Left click shows the summary; right click opens the action menu.
 
-## Ejecutar tras clonar
+## Run After Cloning
 
 ```powershell
 git clone <repo-url>
@@ -30,17 +30,17 @@ cd agentbar
 npx .
 ```
 
-`npx .` instala lo necesario en la cache de npm, compila la interfaz si falta `dist/` y lanza la app en la bandeja del sistema. Para ejecutarla en primer plano y ver logs:
+`npx .` installs what it needs in the npm cache, builds the UI if `dist/` is missing, and starts the app in the system tray. To run it in the foreground and see logs:
 
 ```powershell
 npx . --foreground
 ```
 
-## Empaquetar
+## Package
 
 ```powershell
 npm run build
 npm run package
 ```
 
-Los instaladores quedan en `release/`.
+Installers are written to `release/`.

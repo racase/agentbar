@@ -10,6 +10,65 @@ const SERVICES = [
 ];
 const VISIBLE_SERVICE_IDS = new Set(["codex", "claude"]);
 const THEME_KEY = "ai-usage-theme";
+const LANGUAGE_KEY = "ai-usage-language";
+const COPY = {
+  es: {
+    updated: "Actualizado",
+    waiting: "Esperando datos locales",
+    light: "Claro",
+    dark: "Oscuro",
+    extraUsage: "Uso extra",
+    cost: "Coste",
+    today: "Hoy",
+    last30Days: "Ultimos 30 dias",
+    used: "usado",
+    thisMonth: "Este mes",
+    noLocalLimits: "No hay limites locales para este proveedor.",
+    connectClaudeText: "Conecta Claude para leer los limites reales.",
+    connectClaude: "Conectar Claude",
+    usage: "Uso",
+    currentSession: "Sesion actual",
+    weekly: "Semanal",
+    monthly: "Mensual",
+    resetsNow: "Se restablece ahora",
+    resetsIn: "Se restablece en",
+    now: "ahora",
+    agoMinutes: (minutes) => `hace ${minutes}m`,
+    agoHours: (hours) => `hace ${hours}h`,
+    missing: "No existe",
+    cycleSessions: "Sesiones del ciclo",
+    liveApiUnavailable: "API real no disponible.",
+    cachedWebRead: "Ultima lectura web conservada por fallo temporal.",
+  },
+  en: {
+    updated: "Updated",
+    waiting: "Waiting for local data",
+    light: "Light",
+    dark: "Dark",
+    extraUsage: "Extra usage",
+    cost: "Cost",
+    today: "Today",
+    last30Days: "Last 30 days",
+    used: "used",
+    thisMonth: "This month",
+    noLocalLimits: "No local limits are available for this provider.",
+    connectClaudeText: "Connect Claude to read real limits.",
+    connectClaude: "Connect Claude",
+    usage: "Usage",
+    currentSession: "Current session",
+    weekly: "Weekly",
+    monthly: "Monthly",
+    resetsNow: "Resets now",
+    resetsIn: "Resets in",
+    now: "now",
+    agoMinutes: (minutes) => `${minutes}m ago`,
+    agoHours: (hours) => `${hours}h ago`,
+    missing: "Missing",
+    cycleSessions: "Cycle sessions",
+    liveApiUnavailable: "Live API unavailable.",
+    cachedWebRead: "Last web reading kept after a temporary failure.",
+  },
+};
 
 const fallbackSummary = {
   generatedAt: null,
@@ -22,6 +81,7 @@ export default function App() {
   const [summary, setSummary] = useState(fallbackSummary);
   const [selectedId, setSelectedId] = useState("codex");
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || "light");
+  const [language, setLanguage] = useState(() => localStorage.getItem(LANGUAGE_KEY) || "es");
 
   useEffect(() => {
     let cancelled = false;
@@ -51,10 +111,16 @@ export default function App() {
     localStorage.setItem(THEME_KEY, theme);
   }, [theme]);
 
+  useEffect(() => {
+    document.documentElement.lang = language;
+    localStorage.setItem(LANGUAGE_KEY, language);
+  }, [language]);
+
   const services = useMemo(() => orderServices(summary.services), [summary.services]);
   const visibleServices = useMemo(() => services.filter((service) => VISIBLE_SERVICE_IDS.has(service.id)), [services]);
   const selected =
     visibleServices.find((service) => service.id === selectedId) || visibleServices[0] || fallbackSummary.services[0];
+  const copy = COPY[language] || COPY.es;
 
   return (
     <main className="screen">
@@ -63,44 +129,47 @@ export default function App() {
           <header className="service-header">
             <div>
               <h1>{selected.name}</h1>
-              <p>{summary.generatedAt ? `Actualizado ${relativeTime(summary.generatedAt)}` : "Esperando datos locales"}</p>
+              <p>{summary.generatedAt ? `${copy.updated} ${relativeTime(summary.generatedAt, language)}` : copy.waiting}</p>
             </div>
             <div className="header-actions">
-              <span>{selected.statusLabel}</span>
-              <button className="theme-toggle" type="button" onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
-                {theme === "light" ? "Claro" : "Oscuro"}
+              <span>{displayStatusLabel(selected.statusLabel, language)}</span>
+              <button className="pill-toggle" type="button" onClick={() => setLanguage(language === "es" ? "en" : "es")}>
+                {language === "es" ? "EN" : "ES"}
+              </button>
+              <button className="pill-toggle" type="button" onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
+                {theme === "light" ? copy.light : copy.dark}
               </button>
             </div>
           </header>
 
           <section className="limits-stack">
             {selected.limits?.length ? (
-              selected.limits.map((limit) => <LimitBlock key={`${selected.id}-${limit.name}`} limit={limit} />)
+              selected.limits.map((limit) => <LimitBlock key={`${selected.id}-${limit.name}`} limit={limit} language={language} />)
             ) : selected.status === "planned" ? (
-              <FutureProvider service={selected} />
+              <FutureProvider service={selected} language={language} />
             ) : selected.id === "claude" ? (
-              <ClaudeConnectState service={selected} />
+              <ClaudeConnectState service={selected} language={language} />
             ) : (
-              <p className="empty">{selected.detail || "No hay limites locales para este proveedor."}</p>
+              <p className="empty">{displayServiceDetail(selected.detail, language) || copy.noLocalLimits}</p>
             )}
           </section>
 
           <section className="usage-section">
-            <h2>Uso extra</h2>
+            <h2>{copy.extraUsage}</h2>
             <Meter value={extraUsagePercent(selected.extraUsage)} />
             <div className="row muted">
-              <span>{extraUsageLabel(selected.extraUsage)}</span>
-              <strong>{extraUsagePercent(selected.extraUsage)}% usado</strong>
+              <span>{extraUsageLabel(selected.extraUsage, language)}</span>
+              <strong>{extraUsagePercent(selected.extraUsage)}% {copy.used}</strong>
             </div>
           </section>
 
           <section className="usage-section">
-            <h2>Coste</h2>
+            <h2>{copy.cost}</h2>
             <button className="cost-row" type="button">
-              <span>Hoy: {todayFromDetail(selected.detail)} · {selected.metric}</span>
+              <span>{copy.today}: {todayFromDetail(selected.detail)} · {selected.metric}</span>
               <span aria-hidden="true">›</span>
             </button>
-            <p className="muted">Ultimos 30 dias: {selected.metric}</p>
+            <p className="muted">{copy.last30Days}: {selected.metric}</p>
           </section>
         </div>
 
@@ -124,14 +193,15 @@ export default function App() {
   );
 }
 
-function LimitBlock({ limit }) {
+function LimitBlock({ limit, language }) {
+  const copy = COPY[language] || COPY.es;
   return (
     <section className="limit-block">
-      <h2>{displayLimitName(limit.name)}</h2>
+      <h2>{displayLimitName(limit.name, language)}</h2>
       <Meter value={limit.usedPercent} />
       <div className="row muted">
-        <span>{limit.usedPercent}% usado</span>
-        <strong>{formatReset(limit.resetAt)}</strong>
+        <span>{limit.usedPercent}% {copy.used}</span>
+        <strong>{formatReset(limit.resetAt, language)}</strong>
       </div>
     </section>
   );
@@ -145,28 +215,29 @@ function Meter({ value }) {
   );
 }
 
-function FutureProvider({ service }) {
+function FutureProvider({ service, language }) {
   return (
     <section className="future-card">
       <AgentIcon id={service.id} label={service.name} />
       <div>
         <h2>{service.name}</h2>
-        <p>{service.detail}</p>
+        <p>{displayServiceDetail(service.detail, language)}</p>
       </div>
     </section>
   );
 }
 
-function ClaudeConnectState({ service }) {
+function ClaudeConnectState({ service, language }) {
+  const copy = COPY[language] || COPY.es;
   return (
     <section className="future-card">
       <AgentIcon id="claude" label="Claude" />
       <div>
         <h2>Claude</h2>
-        <p>{service.detail || "Conecta Claude para leer los limites reales."}</p>
+        <p>{displayServiceDetail(service.detail, language) || copy.connectClaudeText}</p>
         {window.aiUsage?.connectClaude ? (
           <button className="inline-action" type="button" onClick={() => window.aiUsage.connectClaude()}>
-            Conectar Claude
+            {copy.connectClaude}
           </button>
         ) : null}
       </div>
@@ -179,15 +250,15 @@ function AgentIcon({ id, label }) {
   if (id === "codex") {
     return (
       <svg className="agent-icon codex-icon" viewBox="0 0 24 24" role="img" aria-label={title}>
-        <path d="M12 3.2 19.6 7.6v8.8L12 20.8l-7.6-4.4V7.6L12 3.2Z" />
-        <path d="M8 9.2h8M8 12h8M8 14.8h5.2" />
+        <path d="M12 3.1c1.4 0 2.6.7 3.4 1.8 1.3-.1 2.6.5 3.3 1.7.7 1.2.7 2.6.1 3.7.7 1.1.7 2.6.1 3.8-.7 1.2-2 1.8-3.3 1.7-.8 1.1-2 1.8-3.4 1.8s-2.6-.7-3.4-1.8c-1.3.1-2.6-.5-3.3-1.7-.7-1.2-.7-2.6-.1-3.8-.7-1.1-.7-2.6-.1-3.8.7-1.2 2-1.8 3.3-1.7.8-1 2-1.7 3.4-1.7Z" />
+        <path d="M8.8 7.1 15.2 11v6M15.2 7.1 8.8 11v6M5.9 10.2 12 13.8l6.1-3.6" />
       </svg>
     );
   }
   if (id === "claude") {
     return (
       <svg className="agent-icon claude-icon" viewBox="0 0 24 24" role="img" aria-label={title}>
-        <path d="M12 3.2c1.1 4.8 3.7 7.5 8.6 8.8-4.9 1.3-7.5 4-8.6 8.8-1.2-4.8-3.8-7.5-8.6-8.8 4.8-1.3 7.4-4 8.6-8.8Z" />
+        <path d="M12 2.6 13.7 8.5l5.5-2.9-2.9 5.5 5.9 1.7-5.9 1.7 2.9 5.5-5.5-2.9L12 22.8l-1.7-5.9L4.8 19.8l2.9-5.5-5.9-1.7 5.9-1.7-2.9-5.5 5.5 2.9L12 2.6Z" />
       </svg>
     );
   }
@@ -236,37 +307,40 @@ function shortName(service) {
   return service.name.replace(" Code", "");
 }
 
-function displayLimitName(name) {
-  if (!name) return "Uso";
-  if (name.match(/sesion|session/i)) return "Sesion actual";
-  if (name.match(/semanal|weekly/i)) return "Semanal";
-  if (name.match(/ciclo|monthly/i)) return "Mensual";
+function displayLimitName(name, language) {
+  const copy = COPY[language] || COPY.es;
+  if (!name) return copy.usage;
+  if (name.match(/sesion|session/i)) return copy.currentSession;
+  if (name.match(/semanal|weekly/i)) return copy.weekly;
+  if (name.match(/ciclo|monthly/i)) return copy.monthly;
   return name;
 }
 
-function formatReset(value) {
+function formatReset(value, language) {
+  const copy = COPY[language] || COPY.es;
   if (!value) return "";
   const diff = new Date(value).getTime() - Date.now();
-  if (diff <= 0) return "Se restablece ahora";
+  if (diff <= 0) return copy.resetsNow;
   const minutes = Math.floor(diff / 60_000);
   const days = Math.floor(minutes / 1440);
   const hours = Math.floor((minutes % 1440) / 60);
   const mins = minutes % 60;
-  if (days > 0) return `Se restablece en ${days}d ${hours}h`;
-  if (hours > 0) return `Se restablece en ${hours}h ${mins}m`;
-  return `Se restablece en ${mins}m`;
+  if (days > 0) return `${copy.resetsIn} ${days}d ${hours}h`;
+  if (hours > 0) return `${copy.resetsIn} ${hours}h ${mins}m`;
+  return `${copy.resetsIn} ${mins}m`;
 }
 
-function relativeTime(value) {
+function relativeTime(value, language) {
+  const copy = COPY[language] || COPY.es;
   const seconds = Math.floor((Date.now() - new Date(value).getTime()) / 1000);
-  if (seconds < 60) return "ahora";
+  if (seconds < 60) return copy.now;
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `hace ${minutes}m`;
-  return `hace ${Math.floor(minutes / 60)}h`;
+  if (minutes < 60) return copy.agoMinutes(minutes);
+  return copy.agoHours(Math.floor(minutes / 60));
 }
 
 function todayFromDetail(detail) {
-  const match = String(detail || "").match(/Hoy:\s*([^.]*)/i);
+  const match = String(detail || "").match(/(?:Hoy|Today):\s*([^.]*)/i);
   return match ? match[1].trim() : "local";
 }
 
@@ -279,10 +353,11 @@ function extraUsagePercent(extraUsage) {
   return clamp((used / limit) * 100);
 }
 
-function extraUsageLabel(extraUsage) {
-  if (!extraUsage) return "Este mes: 0.00 / 0.00";
+function extraUsageLabel(extraUsage, language) {
+  const copy = COPY[language] || COPY.es;
+  if (!extraUsage) return `${copy.thisMonth}: 0.00 / 0.00`;
   const currency = extraUsage.currency || "USD";
-  return `Este mes: ${money(extraUsage.used, currency)} / ${money(extraUsage.limit, currency)}`;
+  return `${copy.thisMonth}: ${money(extraUsage.used, currency)} / ${money(extraUsage.limit, currency)}`;
 }
 
 function money(value, currency) {
@@ -297,6 +372,29 @@ function statusUrl(id) {
   if (id === "gemini") return "https://status.cloud.google.com/";
   if (id === "copilot") return "https://www.githubstatus.com/";
   return "https://status.openai.com/";
+}
+
+function displayStatusLabel(label, language) {
+  if (!label) return "";
+  if (language === "en") {
+    return String(label)
+      .replace(/^Sin datos$/i, "No data")
+      .replace(/^Próximamente$/i, "Soon");
+  }
+  return label;
+}
+
+function displayServiceDetail(detail, language) {
+  if (!detail) return "";
+  if (language !== "en") return detail;
+  return String(detail)
+    .replace(/^No existe /, "Missing ")
+    .replace(/Hoy:/g, "Today:")
+    .replace(/Sesiones del ciclo:/g, "Cycle sessions:")
+    .replace(/API real no disponible\./g, "Live API unavailable.")
+    .replace(/Ultima lectura web conservada por fallo temporal\./g, "Last web reading kept after a temporary failure.")
+    .replace(/La integración de uso para este proveedor se implementará en futuras versiones\./g, "Usage integration for this provider will be implemented in a future version.")
+    .replace(/Abre la herramienta como app Electron para leer datos locales\./g, "Open the tool as an Electron app to read local data.");
 }
 
 function clamp(value) {

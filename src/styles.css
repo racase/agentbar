@@ -152,6 +152,19 @@ button {
   stroke: none;
 }
 
+.codex-icon path:first-child {
+  fill: none;
+  stroke-width: 1.6;
+}
+
+.codex-icon path:last-child {
+  stroke-width: 1.5;
+}
+
+.claude-icon {
+  color: #d97745;
+}
+
 .tab-button:not(.active) .agent-icon {
   color: #727272;
 }
@@ -214,7 +227,7 @@ h2 {
   padding: 3px 8px;
 }
 
-.theme-toggle {
+.pill-toggle {
   border: 1px solid var(--line);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.52);
@@ -225,7 +238,7 @@ h2 {
   padding: 3px 8px;
 }
 
-.theme-toggle:hover {
+.pill-toggle:hover {
   background: var(--card-hover);
 }
 
@@ -466,7 +479,7 @@ h2 {
 }
 
 :root[data-theme="light"] .service-header span,
-:root[data-theme="light"] .theme-toggle {
+:root[data-theme="light"] .pill-toggle {
   border-color: var(--line);
   background: rgba(255, 255, 255, 0.52);
 }
@@ -513,7 +526,7 @@ h2 {
 :root[data-theme="dark"] .tab-button:hover,
 :root[data-theme="dark"] .tab-button.active,
 :root[data-theme="dark"] .service-header span,
-:root[data-theme="dark"] .theme-toggle {
+:root[data-theme="dark"] .pill-toggle {
   border-color: rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.08);
 }
