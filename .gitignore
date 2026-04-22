@@ -1,0 +1,24 @@
+# Dependencies and build output
+node_modules/
+dist/
+release/
+out/
+*.log
+
+# Local runtime/tooling
+.tools/
+.vite/
+
+# Local app state. This can contain browser sessions and Claude cookies.
+.electron-user-data/
+*.cookie
+*cookie*.txt
+*cookies*.json
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

@@ -1,0 +1,14 @@
+node_modules/
+dist/
+release/
+out/
+.tools/
+.electron-user-data/
+.vite/
+*.log
+*.cookie
+*cookie*.txt
+*cookies*.json
+.env
+.env.*
+!/.env.example
