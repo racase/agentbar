@@ -1,6 +1,12 @@
 # AgentBar
 
-App de bandeja para Windows hecha con React + Electron. Muestra un resumen compacto estilo CodexBar con datos locales de Codex y Claude.
+App de bandeja para Windows hecha con React + Electron. Muestra un resumen compacto del uso de agentes de IA desde la barra del sistema.
+
+## Capturas
+
+| Modo oscuro | Modo claro |
+| --- | --- |
+| ![AgentBar en modo oscuro](docs/screenshots/agentbar-dark.png) | ![AgentBar en modo claro](docs/screenshots/agentbar-light.png) |
 
 ## Requisitos
 
@@ -38,15 +44,3 @@ npm run package
 ```
 
 Los instaladores quedan en `release/`.
-
-## Datos locales
-
-- Codex: `%USERPROFILE%\.codex\sessions`
-- Claude: `%USERPROFILE%\.claude\usage-data\session-meta`
-- Sesion web de Claude: se guarda en el directorio de datos de la app de Electron, no en el repo.
-
-Codex usa `token_count.rate_limits` para pintar `Sesion actual`, `5 h` y `Semanal`.
-
-## Seguridad
-
-No subas datos de usuario ni sesiones al repositorio. `.gitignore` excluye `node_modules/`, `.tools/`, `dist/`, `release/`, `.electron-user-data/`, cookies y ficheros `.env`.
