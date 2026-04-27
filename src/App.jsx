@@ -18,14 +18,21 @@ const COPY = {
     light: "Claro",
     dark: "Oscuro",
     extraUsage: "Uso extra",
-    cost: "Coste",
+    modelTokens: "Tokens por modelo",
+    noModelTokens: "Sin desglose por modelo este mes.",
     today: "Hoy",
-    last30Days: "Ultimos 30 dias",
+    total: "Total",
+    input: "Input",
+    output: "Output",
+    cache: "Cache",
+    reasoning: "Razonamiento",
+    events: "Eventos",
     used: "usado",
     thisMonth: "Este mes",
     noLocalLimits: "No hay limites locales para este proveedor.",
     connectClaudeText: "Conecta Claude para leer los limites reales.",
     connectClaude: "Conectar Claude",
+    reconnectClaude: "Reconectar Claude",
     usage: "Uso",
     currentSession: "Sesion actual",
     weekly: "Semanal",
@@ -46,14 +53,21 @@ const COPY = {
     light: "Light",
     dark: "Dark",
     extraUsage: "Extra usage",
-    cost: "Cost",
+    modelTokens: "Tokens by model",
+    noModelTokens: "No model breakdown for this month.",
     today: "Today",
-    last30Days: "Last 30 days",
+    total: "Total",
+    input: "Input",
+    output: "Output",
+    cache: "Cache",
+    reasoning: "Reasoning",
+    events: "Events",
     used: "used",
     thisMonth: "This month",
     noLocalLimits: "No local limits are available for this provider.",
     connectClaudeText: "Connect Claude to read real limits.",
     connectClaude: "Connect Claude",
+    reconnectClaude: "Reconnect Claude",
     usage: "Usage",
     currentSession: "Current session",
     weekly: "Weekly",
@@ -93,7 +107,7 @@ export default function App() {
       loadSummary().then((next) => {
         if (!cancelled) setSummary(next);
       });
-    }, 60_000);
+    }, 5_000);
 
     return () => {
       cancelled = true;
@@ -163,14 +177,7 @@ export default function App() {
             </div>
           </section>
 
-          <section className="usage-section">
-            <h2>{copy.cost}</h2>
-            <button className="cost-row" type="button">
-              <span>{copy.today}: {todayFromDetail(selected.detail)} · {selected.metric}</span>
-              <span aria-hidden="true">›</span>
-            </button>
-            <p className="muted">{copy.last30Days}: {selected.metric}</p>
-          </section>
+          <ModelBreakdown models={selected.modelBreakdown} language={language} />
         </div>
 
         <nav className="service-tabs" aria-label="Servicios">
@@ -215,6 +222,39 @@ function Meter({ value }) {
   );
 }
 
+function ModelBreakdown({ models, language }) {
+  const copy = COPY[language] || COPY.es;
+  const visibleModels = Array.isArray(models) ? models.filter((model) => model.totalTokens > 0) : [];
+
+  return (
+    <section className="usage-section model-section">
+      <h2>{copy.modelTokens}</h2>
+      {visibleModels.length ? (
+        <div className="model-list">
+          {visibleModels.map((model) => (
+            <article className="model-row" key={model.model}>
+              <div className="model-main">
+                <strong>{displayModelName(model.model)}</strong>
+                <span>{copy.total}: {compactNumber(model.totalTokens)}</span>
+              </div>
+              <div className="model-parts">
+                <span>{copy.input}: {compactNumber(model.inputTokens)}</span>
+                <span>{copy.output}: {compactNumber(model.outputTokens)}</span>
+                {model.cacheCreationInputTokens || model.cacheReadInputTokens || model.cachedInputTokens ? (
+                  <span>{copy.cache}: {compactNumber(model.cacheCreationInputTokens + model.cacheReadInputTokens + model.cachedInputTokens)}</span>
+                ) : null}
+                {model.reasoningOutputTokens ? <span>{copy.reasoning}: {compactNumber(model.reasoningOutputTokens)}</span> : null}
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="muted">{copy.noModelTokens}</p>
+      )}
+    </section>
+  );
+}
+
 function FutureProvider({ service, language }) {
   return (
     <section className="future-card">
@@ -229,6 +269,8 @@ function FutureProvider({ service, language }) {
 
 function ClaudeConnectState({ service, language }) {
   const copy = COPY[language] || COPY.es;
+  const reconnect = /caducad|reconect|invalid session|reconnect/i.test(String(service.detail || ""))
+    || /reconectar/i.test(String(service.statusLabel || ""));
   return (
     <section className="future-card">
       <AgentIcon id="claude" label="Claude" />
@@ -237,7 +279,7 @@ function ClaudeConnectState({ service, language }) {
         <p>{displayServiceDetail(service.detail, language) || copy.connectClaudeText}</p>
         {window.aiUsage?.connectClaude ? (
           <button className="inline-action" type="button" onClick={() => window.aiUsage.connectClaude()}>
-            {copy.connectClaude}
+            {reconnect ? copy.reconnectClaude : copy.connectClaude}
           </button>
         ) : null}
       </div>
@@ -344,6 +386,16 @@ function todayFromDetail(detail) {
   return match ? match[1].trim() : "local";
 }
 
+function displayModelName(model) {
+  return String(model || "")
+    .replace(/^gpt-/, "GPT-")
+    .replace(/^claude-/, "Claude ")
+    .replace(/-/g, " ")
+    .replace(/\bsonnet\b/i, "Sonnet")
+    .replace(/\bopus\b/i, "Opus")
+    .replace(/\bhaiku\b/i, "Haiku");
+}
+
 function extraUsagePercent(extraUsage) {
   if (!extraUsage) return 0;
   if (Number.isFinite(Number(extraUsage.utilization))) return clamp(extraUsage.utilization);
@@ -364,6 +416,16 @@ function money(value, currency) {
   const amount = Number(value);
   if (!Number.isFinite(amount)) return "-";
   return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(amount);
+}
+
+function compactNumber(value) {
+  return compact(Number(value || 0));
+}
+
+function compact(value) {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}k`;
+  return `${Math.round(value)}`;
 }
 
 function statusUrl(id) {
@@ -391,6 +453,8 @@ function displayServiceDetail(detail, language) {
     .replace(/^No existe /, "Missing ")
     .replace(/Hoy:/g, "Today:")
     .replace(/Sesiones del ciclo:/g, "Cycle sessions:")
+    .replace(/Sesion web caducada\./g, "Web session expired.")
+    .replace(/Vuelve a conectar Claude\./g, "Reconnect Claude.")
     .replace(/API real no disponible\./g, "Live API unavailable.")
     .replace(/Ultima lectura web conservada por fallo temporal\./g, "Last web reading kept after a temporary failure.")
     .replace(/La integración de uso para este proveedor se implementará en futuras versiones\./g, "Usage integration for this provider will be implemented in a future version.")

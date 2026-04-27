@@ -43,7 +43,7 @@ function readCodex() {
 
   const files = walkFiles(sessionsDir, ".jsonl")
     .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)
-    .slice(0, 80);
+    .slice(0, 300);
 
   let latestRate = null;
   let latestInfo = null;
@@ -51,6 +51,7 @@ function readCodex() {
   let monthlyTokens = 0;
   let todayTokens = 0;
   let sessionCount = 0;
+  const modelBreakdown = new Map();
   const monthStart = startOfMonth();
   const now = new Date();
 
@@ -61,6 +62,7 @@ function readCodex() {
     if (parsed.tokens && parsed.timestamp >= monthStart) {
       monthlyTokens += parsed.tokens;
       sessionCount += 1;
+      addModelUsage(modelBreakdown, parsed.model, parsed.usage);
     }
     if (parsed.tokens && sameDay(parsed.timestamp, now)) {
       todayTokens += parsed.tokens;
@@ -87,6 +89,7 @@ function readCodex() {
     metric: `${compact(monthlyTokens)} tokens`,
     detail: `Hoy: ${compact(todayTokens)}. Sesiones del ciclo: ${sessionCount}.`,
     limits,
+    modelBreakdown: modelBreakdownList(modelBreakdown),
   };
 }
 
@@ -95,12 +98,14 @@ function readCodexSession(file) {
   let lastInfo = null;
   let lastRate = null;
   let lastTimestamp = null;
+  let model = null;
 
   try {
     for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
       if (!line.trim()) continue;
       try {
         const event = JSON.parse(line);
+        if (event.payload?.model) model = event.payload.model;
         if (event?.payload?.type !== "token_count") continue;
         if (event.payload.info?.total_token_usage) {
           lastUsage = event.payload.info.total_token_usage;
@@ -121,8 +126,10 @@ function readCodexSession(file) {
   return {
     timestamp: lastTimestamp,
     tokens: tokenTotal(lastUsage),
+    usage: normalizeUsage(lastUsage),
     rateLimits: lastRate,
     info: lastInfo,
+    model,
   };
 }
 
@@ -134,6 +141,18 @@ async function readClaude() {
   const cookieHeader = readClaudeCookieHeader();
   if (cookieHeader) {
     const web = await readClaudeWebUsage(local, cookieHeader);
+    if (web?.service) {
+      lastClaudeWebService = { service: web.service, cachedAt: Date.now() };
+      return web.service;
+    }
+    if (web?.invalidSession) {
+      return {
+        ...local,
+        status: "needs_config",
+        statusLabel: "Reconectar",
+        detail: `${local.detail.replace(/ API real no disponible\./, ".")} Sesion web caducada. Vuelve a conectar Claude.`,
+      };
+    }
     if (web) {
       lastClaudeWebService = { service: web, cachedAt: Date.now() };
       return web;
@@ -170,6 +189,7 @@ function readClaudeLocalUsage() {
   let monthlyTokens = 0;
   let todayTokens = 0;
   let sessionCount = 0;
+  const modelBreakdown = readClaudeModelBreakdown(monthStart, monthEnd);
 
   for (const file of files) {
     try {
@@ -193,7 +213,42 @@ function readClaudeLocalUsage() {
     metric: `${compact(monthlyTokens)} tokens`,
     detail: `Hoy: ${compact(todayTokens)}. Sesiones del ciclo: ${sessionCount}. API real no disponible.`,
     limits: [],
+    modelBreakdown,
   };
+}
+
+function readClaudeModelBreakdown(monthStart, monthEnd) {
+  const projectsDir = path.join(os.homedir(), ".claude", "projects");
+  const models = new Map();
+
+  if (!fs.existsSync(projectsDir)) return [];
+
+  for (const file of walkFiles(projectsDir, ".jsonl")) {
+    if (fs.statSync(file).size > 20_000_000) continue;
+    try {
+      for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
+        if (!line.trim()) continue;
+        try {
+          const event = JSON.parse(line);
+          const timestamp = new Date(event.timestamp || event.created_at || 0);
+          if (!Number.isFinite(timestamp.getTime()) || timestamp < monthStart || timestamp >= monthEnd) continue;
+
+          const message = event.message || {};
+          const model = message.model || event.model;
+          const usage = message.usage || event.usage;
+          if (!model || !usage) continue;
+
+          addModelUsage(models, model, normalizeUsage(usage));
+        } catch {
+          // Ignore partial JSON lines from active sessions.
+        }
+      }
+    } catch {
+      // Ignore files that are being written.
+    }
+  }
+
+  return modelBreakdownList(models);
 }
 
 async function readClaudeOAuthUsage(local) {
@@ -260,8 +315,11 @@ async function readClaudeWebUsage(local, cookieHeader) {
         currency: overage.currency || "USD",
       };
     }
-    return service;
-  } catch {
+    return { service };
+  } catch (error) {
+    if (error?.code === "account_session_invalid") {
+      return { invalidSession: true };
+    }
     return null;
   }
 }
@@ -275,7 +333,20 @@ async function claudeWebGet(endpoint, cookieHeader) {
     },
     signal: AbortSignal.timeout(15_000),
   });
-  if (!response.ok) throw new Error(`Claude web API HTTP ${response.status}`);
+  if (!response.ok) {
+    const body = await response.text();
+    let code = null;
+    try {
+      code = JSON.parse(body)?.error?.details?.error_code || null;
+    } catch {
+      code = null;
+    }
+    const error = new Error(`Claude web API HTTP ${response.status}`);
+    error.status = response.status;
+    error.code = code;
+    error.body = body;
+    throw error;
+  }
   return response.json();
 }
 
@@ -416,6 +487,7 @@ function baseService(id, name, mark, source) {
     detail: "",
     url: null,
     limits: [],
+    modelBreakdown: [],
   };
 }
 
@@ -446,6 +518,58 @@ function sessionUsagePercent(info) {
 
 function tokenTotal(usage) {
   return Number(usage?.total_tokens || 0);
+}
+
+function normalizeUsage(usage) {
+  const inputTokens = Number(usage?.input_tokens || 0);
+  const cachedInputTokens = Number(usage?.cached_input_tokens || 0);
+  const cacheCreationInputTokens = Number(usage?.cache_creation_input_tokens || 0);
+  const cacheReadInputTokens = Number(usage?.cache_read_input_tokens || 0);
+  const outputTokens = Number(usage?.output_tokens || 0);
+  const reasoningOutputTokens = Number(usage?.reasoning_output_tokens || 0);
+  const explicitTotal = Number(usage?.total_tokens || 0);
+
+  return {
+    inputTokens,
+    cachedInputTokens,
+    cacheCreationInputTokens,
+    cacheReadInputTokens,
+    outputTokens,
+    reasoningOutputTokens,
+    totalTokens: explicitTotal || inputTokens + cachedInputTokens + cacheCreationInputTokens + cacheReadInputTokens + outputTokens,
+  };
+}
+
+function addModelUsage(models, model, usage) {
+  if (!model || !usage) return;
+  const current = models.get(model) || {
+    model,
+    inputTokens: 0,
+    cachedInputTokens: 0,
+    cacheCreationInputTokens: 0,
+    cacheReadInputTokens: 0,
+    outputTokens: 0,
+    reasoningOutputTokens: 0,
+    totalTokens: 0,
+    events: 0,
+  };
+
+  current.inputTokens += Number(usage.inputTokens || 0);
+  current.cachedInputTokens += Number(usage.cachedInputTokens || 0);
+  current.cacheCreationInputTokens += Number(usage.cacheCreationInputTokens || 0);
+  current.cacheReadInputTokens += Number(usage.cacheReadInputTokens || 0);
+  current.outputTokens += Number(usage.outputTokens || 0);
+  current.reasoningOutputTokens += Number(usage.reasoningOutputTokens || 0);
+  current.totalTokens += Number(usage.totalTokens || 0);
+  current.events += 1;
+  models.set(model, current);
+}
+
+function modelBreakdownList(models) {
+  return [...models.values()]
+    .filter((item) => item.totalTokens > 0)
+    .sort((a, b) => b.totalTokens - a.totalTokens)
+    .slice(0, 6);
 }
 
 function walkFiles(root, extension) {

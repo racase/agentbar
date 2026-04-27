@@ -42,14 +42,14 @@ button {
   display: grid;
   min-height: 100vh;
   place-items: center;
-  padding: 12px;
+  padding: 8px;
 }
 
 .usage-popover {
   display: flex;
   flex-direction: column;
   width: min(344px, calc(100vw - 16px));
-  height: calc(100vh - 16px);
+  height: calc(100vh - 12px);
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.74);
   border-radius: 8px;
@@ -64,12 +64,11 @@ button {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.24) transparent;
+  scrollbar-width: none;
 }
 
 .usage-content::-webkit-scrollbar {
-  width: 6px;
+  width: 0;
 }
 
 .usage-content::-webkit-scrollbar-thumb {
@@ -84,21 +83,21 @@ button {
   gap: 2px;
   border-top: 1px solid var(--line);
   background: rgba(243, 243, 243, 0.72);
-  padding: 6px 8px 8px;
+  padding: 5px 8px 7px;
 }
 
 .tab-button {
   position: relative;
   display: grid;
   min-width: 0;
-  min-height: 48px;
+  min-height: 44px;
   place-items: center;
   border: 1px solid transparent;
   border-radius: 5px;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
-  padding: 4px 2px 8px;
+  padding: 4px 2px 7px;
 }
 
 .tab-button:hover {
@@ -185,7 +184,7 @@ button {
   align-items: end;
   justify-content: space-between;
   gap: 12px;
-  padding: 16px 16px 12px;
+  padding: 14px 14px 10px;
 }
 
 .header-actions {
@@ -244,9 +243,9 @@ h2 {
 
 .limits-stack {
   display: grid;
-  gap: 10px;
-  min-height: 218px;
-  padding: 0 12px 12px;
+  gap: 8px;
+  min-height: 0;
+  padding: 0 10px 10px;
 }
 
 .limit-block,
@@ -259,17 +258,17 @@ h2 {
 
 .limit-block {
   display: grid;
-  gap: 7px;
-  padding: 12px;
+  gap: 6px;
+  padding: 10px;
 }
 
 .usage-section {
-  margin: 0 12px 10px;
-  padding: 12px;
+  margin: 0 10px 8px;
+  padding: 10px;
 }
 
 .usage-section:last-of-type {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .thin-bar {
@@ -328,6 +327,137 @@ h2 {
 .cost-row:hover {
   border-color: var(--line);
   background: var(--card-hover);
+}
+
+.model-section {
+  display: grid;
+  gap: 6px;
+}
+
+.model-list {
+  display: grid;
+  gap: 6px;
+}
+
+.model-row {
+  display: grid;
+  gap: 4px;
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+}
+
+.model-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.model-main,
+.model-parts {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.model-main strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-main span,
+.model-parts span {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.model-parts {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 4px 9px;
+}
+
+@media (max-height: 620px) {
+  .screen {
+    padding: 4px;
+  }
+
+  .usage-popover {
+    width: min(332px, calc(100vw - 8px));
+    height: calc(100vh - 8px);
+  }
+
+  .service-header {
+    padding: 10px 12px 8px;
+  }
+
+  h1 {
+    font-size: 0.95rem;
+  }
+
+  h2 {
+    margin-bottom: 6px;
+    font-size: 0.82rem;
+  }
+
+  .service-header p,
+  .service-header span,
+  .pill-toggle,
+  .muted,
+  .row strong {
+    font-size: 0.7rem;
+  }
+
+  .limits-stack {
+    gap: 6px;
+    padding: 0 8px 8px;
+  }
+
+  .limit-block,
+  .usage-section {
+    padding: 8px;
+  }
+
+  .usage-section {
+    margin: 0 8px 7px;
+  }
+
+  .thin-bar {
+    height: 5px;
+  }
+
+  .model-main strong {
+    font-size: 0.76rem;
+  }
+
+  .model-main span,
+  .model-parts span {
+    font-size: 0.66rem;
+  }
+
+  .service-tabs {
+    padding: 4px 6px 6px;
+  }
+
+  .tab-button {
+    min-height: 39px;
+    padding-bottom: 5px;
+  }
+
+  .agent-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .tab-label {
+    font-size: 0.64rem;
+  }
 }
 
 .empty {

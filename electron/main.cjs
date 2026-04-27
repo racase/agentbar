@@ -36,7 +36,7 @@ app.whenReady().then(() => {
   createTray();
   createPopover();
   refreshSummary();
-  setInterval(refreshSummary, 60_000);
+  setInterval(refreshSummary, 5_000);
   setTimeout(() => {
     if (!startHidden && startVisible) showPopover();
   }, 500);
@@ -235,7 +235,9 @@ function readSavedClaudeSessionKey() {
 function createPopover() {
   popover = new BrowserWindow({
     width: 330,
-    height: 560,
+    height: 640,
+    minWidth: 300,
+    minHeight: 420,
     show: false,
     frame: false,
     resizable: false,
@@ -304,9 +306,19 @@ function togglePopover() {
 function showPopover() {
   if (!isAlive(popover)) createPopover();
   refreshSummary();
+  resizePopoverForDisplay();
   positionPopover();
   popover.show();
   popover.focus();
+}
+
+function resizePopoverForDisplay() {
+  if (!isAlive(popover) || !tray) return;
+  const trayBounds = tray.getBounds();
+  const display = screen.getDisplayNearestPoint({ x: trayBounds.x, y: trayBounds.y });
+  const height = Math.max(420, Math.min(680, display.workArea.height - 24));
+  const width = Math.max(306, Math.min(344, display.workArea.width - 16));
+  popover.setSize(width, height, false);
 }
 
 function positionPopover() {
