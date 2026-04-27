@@ -1,12 +1,28 @@
 # AgentBar
 
-Windows tray app built with React and Electron. It shows a compact usage summary for AI agents directly from the system tray.
+AgentBar is a Windows tray app built with React and Electron. It shows a compact usage summary for AI agents directly from the system tray.
+
+## Features
+
+- Windows tray popover UI
+- Codex usage from local session data
+- Claude local token activity by model
+- Claude web session reconnect flow
+- Light and dark theme
+- Spanish and English UI
+- Compact dashboard layout for small screens
 
 ## Screenshots
 
 | Dark mode | Light mode |
 | --- | --- |
 | ![AgentBar in dark mode](docs/screenshots/agentbar-dark.png) | ![AgentBar in light mode](docs/screenshots/agentbar-light.png) |
+
+## Current support
+
+- `Codex`: local usage and limits from local session data
+- `Claude`: local token activity, plus web session support when Claude accepts the saved browser session
+- `Gemini`, `Copilot`, `Cursor`: placeholders for future versions
 
 ## Requirements
 
@@ -36,6 +52,12 @@ npx .
 npx . --foreground
 ```
 
+To open the popover immediately at startup:
+
+```powershell
+npx . --show
+```
+
 ## Package
 
 ```powershell
@@ -44,3 +66,12 @@ npm run package
 ```
 
 Installers are written to `release/`.
+
+## Notes
+
+- Claude web limits depend on the current validity of the saved Claude web session.
+- Local runtime state, cookies, and browser sessions are intentionally ignored by Git and are not part of the repository.
+
+## License
+
+MIT
