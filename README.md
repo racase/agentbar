@@ -72,6 +72,11 @@ Installers are written to `release/`.
 - Claude web limits depend on the current validity of the saved Claude web session.
 - Local runtime state, cookies, and browser sessions are intentionally ignored by Git and are not part of the repository.
 
+## Community
+
+- Contribution guide: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+
 ## License
 
 MIT
