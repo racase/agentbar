@@ -80,3 +80,11 @@ Installers are written to `release/`.
 ## License
 
 MIT
+
+## 💰 Bounty Contribution
+
+- **Task:** Add per-session cost tracking alongside token counts
+- **Reward:** $2
+- **Source:** GitHub-Paid
+- **Date:** 2026-04-27
+
